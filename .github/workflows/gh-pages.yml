@@ -9,17 +9,23 @@ on:
     - cron: '0 0 * * *'  # every day at midnight
 jobs:
   deploy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: target/release/cmranking
+          key: ${{ hashFiles('./Cargo.toml', './src/**') }}
 
       - name: Release build
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --release
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo build --release
+
+      - name: Release run
+        run: ./target/release/cmranking
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
